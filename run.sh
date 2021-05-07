@@ -1,0 +1,1 @@
+sudo /home/procandi/.rvm/wrappers/ruby-2.4.7/ruby /mnt/d/ed/workspace/learnDICOM/main.rb
