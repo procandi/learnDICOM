@@ -196,12 +196,17 @@ module DICOM
       if vr == 'AT'
         bin = encode_tag(value)
       else
+        # => @miffyer.
+        #p value
         # Make sure the value is in an array:
         value = [value] unless value.is_a?(Array)
+        #p value
         # Get the proper pack string:
         type = vr_to_str(vr)
+        #p type
         # Encode:
         bin = value.pack(type)
+        #p bin
         # Add an empty byte if the resulting binary has an odd length:
         bin = "#{bin}#{@pad_byte[vr]}" if bin.length.odd?
       end

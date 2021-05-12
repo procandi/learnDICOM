@@ -46,6 +46,7 @@ module DICOM
 
   # Network transmission successful.
   SUCCESS = 0
+  PENDING = 65280 or 65281  # => @miffyer.
   # Network proposition accepted.
   ACCEPTANCE = 0
   # Presentation context rejected by abstract syntax.

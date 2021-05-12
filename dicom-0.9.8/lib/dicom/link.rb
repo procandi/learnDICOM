@@ -197,6 +197,10 @@ module DICOM
         # Tag (4 bytes)
         @outgoing.add_last(@outgoing.encode_tag(element[0]))
         # Encode the value first, so we know its length:
+        # => @miffyer.
+        #p 'asdfasdf'
+        #p element[2]
+        #p element[1]
         value = @outgoing.encode_value(element[2], element[1])
         # Length (2 bytes)
         @outgoing.encode_last(value.length, "US")
@@ -414,6 +418,11 @@ module DICOM
     def handle_incoming_data(path)
       # Wait for incoming data:
       segments = receive_multiple_transmissions(file=true)
+
+      # very very important. @miffyer.
+      #p 'segments'
+      #p segments
+
       # Reset command results arrays:
       @command_results = Array.new
       @data_results = Array.new
@@ -433,10 +442,21 @@ module DICOM
             # Join the recorded data binary strings together to make a DICOM file binary string and put it in our files Array:
             files << single_file_data.join
             single_file_data = Array.new
+
+            # @miffyer
+            #p 'data_last_fragment'
+            #p @data_results
+            #p single_file_data
+            #p files
           elsif info[:presentation_context_flag] == COMMAND_LAST_FRAGMENT
             @command_results << info[:results]
             @presentation_context_id = info[:presentation_context_id] # Does this actually do anything useful?
             file_transfer_syntaxes << @presentation_contexts[info[:presentation_context_id]]
+
+            # @miffyer
+            #p @command_results
+            #p presentation_context_id
+            #p file_transfer_syntaxes
           end
         end
       end
@@ -474,6 +494,15 @@ module DICOM
     # be a C-ECHO-RSP in response to an echo request.
     #
     def handle_response
+      p 'handle_response'
+      p @command_request["0000,0002"]
+      p command_field_response(@command_request["0000,0100"])
+      p @command_request["0000,0110"]
+      p NO_DATA_SET_PRESENT
+      p SUCCESS
+      p  @command_request["0000,1000"]
+
+
       # Need to construct the command elements array:
       command_elements = Array.new
       # SOP Class UID:
@@ -488,6 +517,153 @@ module DICOM
       command_elements << ["0000,0900", "US", SUCCESS]
       # Affected SOP Instance UID:
       command_elements << ["0000,1000", "UI", @command_request["0000,1000"]] if @command_request["0000,1000"]
+      build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
+      transmit
+    end
+
+
+    def handle_response_cfindrsp_nodata
+      # => @miffyer.
+      
+      p 'handle_response_cfindrsp_nodata'
+      p @command_request["0000,0002"]
+      p command_field_response(@command_request["0000,0100"])
+      p @command_request["0000,0110"]
+      p NO_DATA_SET_PRESENT
+      p PENDING
+      p  @command_request["0000,1000"]
+
+
+      # Need to construct the command elements array:
+      command_elements = Array.new
+      # SOP Class UID:
+      command_elements << ["0000,0002", "UI", @command_request["0000,0002"]]
+      # Command Field:
+      command_elements << ["0000,0100", "US", command_field_response(@command_request["0000,0100"])]
+      # Message ID Being Responded To:
+      command_elements << ["0000,0120", "US", @command_request["0000,0110"]]
+      # Data Set Type:
+      command_elements << ["0000,0800", "US", NO_DATA_SET_PRESENT]
+      #command_elements << ["0000,0800", "US", 1]
+      #command_elements << ["0000,0800", "US", "(0010,0010) PN  VIVALDI^ANTONIO"]
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+      # Status:
+      #command_elements << ["0000,0900", "US", 0]
+      command_elements << ["0000,0900", "US", 65280]
+      # Affected SOP Instance UID:
+      #command_elements << ["0000,1000", "UI", @command_request["0000,1000"]] if @command_request["0000,1000"]
+
+      #data set:
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+
+      p 'command_elements'
+      p command_elements
+
+      build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
+      transmit
+    end
+
+    def handle_response_cfindrsp
+      # => @miffyer.
+      
+      p 'handle_response_cfindrsp'
+      p @command_request["0000,0002"]
+      p command_field_response(@command_request["0000,0100"])
+      p @command_request["0000,0110"]
+      p DATA_SET_PRESENT
+      p PENDING
+      p  @command_request["0000,1000"]
+
+
+      # Need to construct the command elements array:
+      command_elements = Array.new
+      # SOP Class UID:
+      command_elements << ["0000,0002", "UI", @command_request["0000,0002"]]
+      # Command Field:
+      command_elements << ["0000,0100", "US", command_field_response(@command_request["0000,0100"])]
+      # Message ID Being Responded To:
+      command_elements << ["0000,0120", "US", @command_request["0000,0110"]]
+      # Data Set Type:
+      #command_elements << ["0000,0800", "US", NO_DATA_SET_PRESENT]
+      command_elements << ["0000,0800", "US", DATA_SET_PRESENT]
+      #command_elements << ["0000,0800", "US", "mfr0813"]
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+      # Status:
+      #command_elements << ["0000,0900", "US", 0]
+      command_elements << ["0000,0900", "US", 65280]
+      # Affected SOP Instance UID:
+      #command_elements << ["0000,1000", "UI", @command_request["0000,1000"]] if @command_request["0000,1000"]
+
+      #data set:
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+
+      p 'command_elements'
+      p command_elements
+
+      build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
+      transmit
+
+
+      # => important! important! important! response dicom modality worklist data at there! @miffyer.
+=begin
+      @data_elements = [
+        ["0008,0018", ""], # SOP Instance UID
+        ["0008,0052", "IMAGE"], # Query/Retrieve Level:  "IMAGE"
+        ["0020,000D", ""], # Study Instance UID
+        ["0020,000E", ""] # Series Instance UID
+      ]
+=end
+      data_elements = [
+        ["0010,0010", "test123"], # SOP Instance UID
+        ["0010,0020", "mfr0813"]
+      ]
+      build_data_fragment(data_elements, @presentation_context_id)
+      transmit
+    end
+
+    def handle_response_cfindrsp_success
+      # => @miffyer.
+
+      p 'handle_response_cfindrsp_success'
+      p @command_request["0000,0002"]
+      p command_field_response(@command_request["0000,0100"])
+      p @command_request["0000,0110"]
+      p NO_DATA_SET_PRESENT
+      p PENDING
+      p  @command_request["0000,1000"]
+
+
+      # Need to construct the command elements array:
+      command_elements = Array.new
+      # SOP Class UID:
+      command_elements << ["0000,0002", "UI", @command_request["0000,0002"]]
+      # Command Field:
+      command_elements << ["0000,0100", "US", command_field_response(@command_request["0000,0100"])]
+      # Message ID Being Responded To:
+      command_elements << ["0000,0120", "US", @command_request["0000,0110"]]
+      # Data Set Type:
+      command_elements << ["0000,0800", "US", NO_DATA_SET_PRESENT]
+      #command_elements << ["0000,0800", "US", 1]
+      #command_elements << ["0000,0800", "US", "(0010,0010) PN  VIVALDI^ANTONIO"]
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+      # Status:
+      command_elements << ["0000,0900", "US", 0]
+      #command_elements << ["0000,0900", "US", 65281]
+      # Affected SOP Instance UID:
+      #command_elements << ["0000,1000", "UI", @command_request["0000,1000"]] if @command_request["0000,1000"]
+
+      #data set:
+      #command_elements << ["0010,0010", "PN", 'mfr0813']
+      #command_elements << ["0010,0020", "LO", 'test123']
+
+      p 'command_elements'
+      p command_elements
+
       build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
       transmit
     end
@@ -893,6 +1069,8 @@ module DICOM
     # * <tt>file</tt> -- A boolean used to inform whether an incoming data fragment is part of a DICOM file reception or not.
     #
     def interpret_command_and_data(message, file=nil)
+      p 'interpret_command_and_data'  # => @miffyer
+
       info = Hash.new
       msg = Stream.new(message, @net_endian)
       # Length (of remaining PDV data) (4 bytes)
@@ -943,6 +1121,9 @@ module DICOM
         if info[:results]["0000,0100"] == C_ECHO_RQ
           logger.info("Received an Echo request. Returning an Echo response.")
           handle_response
+        elsif  info[:results]["0000,0100"] == C_FIND_RQ # => @miffyer
+          logger.info("Received an Find request. Returning an Find response.")
+          handle_response_cfindrsp
         end
       elsif info[:presentation_context_flag] == DATA_MORE_FRAGMENTS or info[:presentation_context_flag] == DATA_LAST_FRAGMENT
         # DATA FRAGMENT:
@@ -950,9 +1131,19 @@ module DICOM
         if file
           # Just store the binary string:
           info[:bin] = msg.rest_string
-          # If this was the last data fragment of a C-STORE, we need to send a receipt:
-          # (However, for, say a C-FIND-RSP, which indicates the end of the query results, this method shall not be called) (Command Field (0000,0100) holds information on this)
-          handle_response if info[:presentation_context_flag] == DATA_LAST_FRAGMENT
+
+          p 'info bin'
+          p info[:bin]
+          if C_FIND_RQ # => @miffyer
+            p 'c_find_rq final response'
+            #handle_response_cfindrsp
+            handle_response_cfindrsp_success
+          else
+            # If this was the last data fragment of a C-STORE, we need to send a receipt:
+            # (However, for, say a C-FIND-RSP, which indicates the end of the query results, this method shall not be called) (Command Field (0000,0100) holds information on this)
+            handle_response if info[:presentation_context_flag] == DATA_LAST_FRAGMENT
+          end
+
         else
           # Decode data elements:
           while msg.index < last_index do
@@ -1094,6 +1285,9 @@ module DICOM
     # Sends the outgoing message (encoded binary string) to the remote node.
     #
     def transmit
+      #p 'transmit'
+      #p @outgoing.string
+
       @session.send(@outgoing.string, 0)
     end
 
@@ -1267,6 +1461,8 @@ module DICOM
           return C_STORE_RSP
         when C_ECHO_RQ
           return C_ECHO_RSP
+        when C_FIND_RQ  # begin support response c-find.@miffyer
+          return C_FIND_RSP
         else
           logger.error("Unknown or unsupported request (#{request}) encountered.")
           return C_CANCEL_RQ
@@ -1442,8 +1638,8 @@ module DICOM
         data = @session.recv(@max_receive_size)
 
         #miffyer
-        p 'data'
-        p data
+        #p 'data'
+        #p data
       end
       data
     end

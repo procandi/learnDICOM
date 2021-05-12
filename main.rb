@@ -9,4 +9,6 @@ require_relative 'SettingHandle'
 
 
 s = DServer.new(104, :host_ae => "MFRPACS")
-s.start_scp("/mnt/d/miffyer/test/")
+
+#s.start_scp("/mnt/d/miffyer/test/")
+s.start_scp("c:/miffyer/test/")

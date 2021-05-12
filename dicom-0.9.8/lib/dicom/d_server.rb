@@ -233,11 +233,16 @@ module DICOM
                   if approved == 1
 
                     p 'post accept message'
+                    p context
                     logger.info("Accepted the association request with context: #{context}")
                   else
                     if rejected == 0
+                      p 'post accept all'
+                      p approved
                       logger.info("Accepted all #{approved} proposed contexts in the association request.")
                     else
+                      p 'post accept only'
+                      p approved
                       logger.warn("Accepted only #{approved} of #{approved+rejected} of the proposed contexts in the association request.")
                     end
                   end
@@ -248,7 +253,7 @@ module DICOM
 
                   p 'each message'
                   # Pass along any messages that has been recorded:
-                  messages.each { |m| logger.public_send(m.first, m.last) } if messages.first
+                  #messages.each { |m| logger.public_send(m.first, m.last) } if messages.first
                 else
                   # No abstract syntaxes in the incoming request were accepted:
                   if rejected == 1
