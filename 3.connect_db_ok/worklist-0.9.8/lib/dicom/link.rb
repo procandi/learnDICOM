@@ -577,6 +577,89 @@ module WORKLIST
       transmit
     end
 
+    def handle_response_cfindrsp_pendding
+      # => @miffyer.
+      
+      p 'handle_response_cfindrsp_pendding'
+      p @command_request["0000,0002"]
+      p command_field_response(@command_request["0000,0100"])
+      p @command_request["0000,0110"]
+      p DATA_SET_PRESENT
+      p PENDING
+      p  @command_request["0000,1000"]
+
+      # Need to construct the command elements array:
+      command_elements = Array.new
+      # SOP Class UID:
+      command_elements << ["0000,0002", "UI", @command_request["0000,0002"]]
+      # Command Field:
+      command_elements << ["0000,0100", "US", command_field_response(@command_request["0000,0100"])]
+      # Message ID Being Responded To:
+      command_elements << ["0000,0120", "US", @command_request["0000,0110"]]
+      # Data Set Type:
+      command_elements << ["0000,0800", "US", DATA_SET_PRESENT]
+      # Status:
+      command_elements << ["0000,0900", "US", PENDING]  # => PENDING=65280. @miffyer
+
+      p 'command_elements'
+      p command_elements
+
+      build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
+      transmit
+
+      #data set:
+      # => important! important! important! response dicom modality worklist data at there! @miffyer.
+      data_elements = [
+        ["0010,0010", "test123"], # SOP Instance UID
+        ["0010,0020", "mfr0813"]
+      ]
+      data_elements=[]
+      build_data_fragment(data_elements, @presentation_context_id)
+      transmit
+    end
+
+    def handle_response_cfindrsp_fromdb
+      # => @miffyer.
+      
+      p 'handle_response_cfindrsp_fromdb'
+
+      # Need to construct the command elements array:
+      command_elements = Array.new
+      # SOP Class UID:
+      command_elements << ["0000,0002", "UI", @command_request["0000,0002"]]
+      # Command Field:
+      command_elements << ["0000,0100", "US", command_field_response(@command_request["0000,0100"])]
+      # Message ID Being Responded To:
+      command_elements << ["0000,0120", "US", @command_request["0000,0110"]]
+      # Data Set Type:
+      command_elements << ["0000,0800", "US", DATA_SET_PRESENT]
+      # Status:
+      command_elements << ["0000,0900", "US", PENDING]  # => PENDING=65280. @miffyer
+
+
+      # => pull data from worklist database. @miffyer
+      worklists=$pacs.pull_worklists
+      len=worklists.length
+      p len
+      p worklists
+
+
+      len.times(){|i|
+        # => send command. @miffyer
+        build_command_fragment(PDU_DATA, @presentation_context_id, COMMAND_LAST_FRAGMENT, command_elements)
+        transmit
+
+        #data set:
+        # => important! important! important! response dicom modality worklist data at there! @miffyer.
+        data_elements = worklists[i]
+        p data_elements
+
+        # => send data. @miffyer
+        build_data_fragment(data_elements, @presentation_context_id)
+        transmit
+      }
+    end
+
     def handle_response_cfindrsp_success
       # => @miffyer.
 
@@ -587,6 +670,11 @@ module WORKLIST
       p NO_DATA_SET_PRESENT
       p PENDING
       p  @command_request["0000,1000"]
+
+
+      # => ok, and clear all query with send elements. @miffyer
+      $pacs.cls_query_elements
+      $pacs.cls_send_elements
 
 
       # Need to construct the command elements array:
@@ -1029,6 +1117,9 @@ module WORKLIST
       msg.endian = @data_endian
       # We will put the results in a hash:
       results = Hash.new
+
+
+
       if info[:presentation_context_flag] == COMMAND_LAST_FRAGMENT
         # COMMAND, LAST FRAGMENT:
         while msg.index < last_index do
@@ -1047,6 +1138,13 @@ module WORKLIST
           value = msg.decode(length, vr)
           # Put tag and value in a hash:
           results[tag] = value
+
+          # => save tag and value to hash. @miffyer
+          p 'from db'
+          p tag
+          p value
+          $pacs.set_query_elements(tag,value)
+          $pacs.set_send_elements(tag)
         end
         # The results hash is put in an array along with (possibly) other results:
         info[:results] = results
@@ -1062,9 +1160,10 @@ module WORKLIST
         if info[:results]["0000,0100"] == C_ECHO_RQ
           logger.info("Received an Echo request. Returning an Echo response.")
           handle_response
-        elsif  info[:results]["0000,0100"] == C_FIND_RQ # => @miffyer
+        elsif  info[:results]["0000,0100"] == C_FIND_RQ # => @miffyer          
+          p 'c-find, and do not response' # => very very important! @miffyer
           logger.info("Received an Find request. Returning an Find response.")
-          handle_response_cfindrsp
+          #handle_response_cfindrsp # => very very important! @miffyer
         end
       elsif info[:presentation_context_flag] == DATA_MORE_FRAGMENTS or info[:presentation_context_flag] == DATA_LAST_FRAGMENT
         # DATA FRAGMENT:
@@ -1099,12 +1198,19 @@ module WORKLIST
             # Value (variable length)
             value = msg.decode(length, type)
             # Put tag and value in a hash:
+            results[tag] = value
+
+            # => save tag and value to hash. @miffyer
+            p 'from success'
             p tag
             p value
+            $pacs.set_query_elements(tag,value)
+            $pacs.set_send_elements(tag)
           end
 
           if C_FIND_RQ # => @miffyer
             p 'c_find_rq final response'
+            handle_response_cfindrsp_fromdb
             handle_response_cfindrsp_success
           else
             # If this was the last data fragment of a C-STORE, we need to send a receipt:
@@ -1137,6 +1243,13 @@ module WORKLIST
             value = msg.decode(length, type)
             # Put tag and value in a hash:
             results[tag] = value
+
+            # => save tag and value to hash. @miffyer
+            p 'from other'
+            p tag
+            p value
+            $pacs.set_query_elements(tag,value)
+            $pacs.set_send_elements(tag)
           end
           # The results hash is put in an array along with (possibly) other results:
           info[:results] = results
