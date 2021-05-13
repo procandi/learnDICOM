@@ -13,3 +13,4 @@ nodeQCSCU = DICOM::DClient.new(SettingHandle::PACS_IP, SettingHandle::PACS_PORT,
 #fpath='/mnt/d/miffyer/temp/DX.1.2.276.0.7230010.3.0.3.5.1.12223065.4270056719'
 fpath='c:/miffyer/test/DX.1.2.276.0.7230010.3.0.3.5.1.12223585.2719980744'
 
+nodeQCSCU.send(fpath)
